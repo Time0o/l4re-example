@@ -1,0 +1,8 @@
+entry l4re-sample-ipc
+kernel fiasco -serial_esc
+roottask moe rom/ipc_sample.cfg
+module l4re
+module ned
+module ipc_sample_sender
+module ipc_sample_receiver
+module ipc_sample.cfg
