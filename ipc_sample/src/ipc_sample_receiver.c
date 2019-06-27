@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <l4/sys/utcb.h>
 #include <l4/sys/types.h>
 
 #include "ipc_sample_common.h"
@@ -12,19 +13,36 @@ int main(int argc, char **argv)
 
   printf("Hello from receiver\n");
 
-  /* receive a trivial IPC with a labelled tag */
+  /* receive IPC */
   l4_msgtag_t tag = l4_ipc_receive(chan_cap, l4_utcb(), L4_IPC_NEVER);
   if (l4_msgtag_has_error(tag))
     {
-      fprintf(stderr, "failed to receive trivial IPC: %s\n",
+      fprintf(stderr, "failed to receive IPC: %s\n",
               ipc_strerror(l4_ipc_error_code(l4_utcb())));
     }
   else
     {
-      printf("successfully received trivial IPC\n");
+      printf("successfully received IPC\n");
 
       if (l4_msgtag_label(tag) != IPC_LABEL)
-        fprintf(stderr, "trivial IPC message has incorrectly labelled tag\n");
+        fprintf(stderr, "IPC message has incorrectly labelled tag\n");
+
+      if (l4_msgtag_words(tag) != L4_UTCB_GENERIC_DATA_SIZE)
+        {
+          fprintf(stderr, "IPC message does not include full MR data\n");
+        }
+      else
+        {
+          l4_msg_regs_t *mr = l4_utcb_mr();
+          for (unsigned i = 0; i < l4_msgtag_words(tag); ++i)
+            {
+              if (mr->mr[i] != i)
+                {
+                  fprintf(stderr, "IPC message includes incorrect MR data\n");
+                  break;
+                }
+            }
+        }
     }
 
   exit(EXIT_SUCCESS);
