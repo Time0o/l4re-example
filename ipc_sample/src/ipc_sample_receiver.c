@@ -19,7 +19,8 @@
 #include "ipc_sample_common.h"
 
 
-int main(void)
+int
+main(void)
 {
   printf("Hello from receiver\n");
 

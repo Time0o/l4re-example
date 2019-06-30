@@ -68,7 +68,8 @@ static struct errcode_str errcodes[] = {
   make_errcode_str(L4_IPC_SEMSGCUT)
 };
 
-char const *ipc_strerror(int code)
+char const *
+ipc_strerror(int code)
 {
   for (size_t i = 0; i < sizeof(errcodes) / sizeof(errcodes[0]); ++i)
     {
