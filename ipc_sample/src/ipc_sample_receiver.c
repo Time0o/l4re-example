@@ -9,47 +9,47 @@
 #include "ipc_sample_common.h"
 
 
-int main(int argc, char **argv)
+int main(void)
 {
-  l4_cap_idx_t chan_cap = get_chan_cap(argc, argv);
-
   printf("Hello from receiver\n");
 
+  /* bind capability */
+  l4_cap_idx_t server = l4re_env_get_cap(IPC_CAP);
+  ipc_chkcap(server, "getting capability");
+
   l4re_env_t *env = l4re_env();
-  if (l4_msgtag_has_error(l4_rcv_ep_bind_thread(chan_cap, env->main_thread, 0)))
-    fprintf(stderr, "failed to bind capability to main thread\n");
+  ipc_chksys(l4_rcv_ep_bind_thread(server, env->main_thread, IPC_THREAD_LABEL),
+             "binding capability to main thread");
 
   /* receive IPC */
-  l4_msgtag_t tag = l4_ipc_receive(chan_cap, l4_utcb(), L4_IPC_NEVER);
-  if (l4_msgtag_has_error(tag))
+  l4_umword_t label;
+  l4_msgtag_t tag = l4_ipc_wait(l4_utcb(), &label, L4_IPC_NEVER);
+  ipc_chksys(tag, "receiving IPC\n");
+
+  if (label != IPC_THREAD_LABEL)
+    fprintf(stderr, "IPC has incorrect thread label\n");
+
+  if (l4_msgtag_label(tag) != IPC_LABEL)
+    fprintf(stderr, "IPC has incorrect tag label\n");
+
+  if (l4_msgtag_words(tag) != L4_UTCB_GENERIC_DATA_SIZE)
     {
-      fprintf(stderr, "failed to receive IPC: %s\n",
-              ipc_strerror(l4_ipc_error_code(l4_utcb())));
+      fprintf(stderr, "IPC message does not include full MR data\n");
     }
   else
     {
-      printf("successfully received IPC\n");
-
-      if (l4_msgtag_label(tag) != IPC_LABEL)
-        fprintf(stderr, "IPC message has incorrectly labelled tag\n");
-
-      if (l4_msgtag_words(tag) != L4_UTCB_GENERIC_DATA_SIZE)
+      l4_msg_regs_t *mr = l4_utcb_mr();
+      for (unsigned i = 0; i < l4_msgtag_words(tag); ++i)
         {
-          fprintf(stderr, "IPC message does not include full MR data\n");
-        }
-      else
-        {
-          l4_msg_regs_t *mr = l4_utcb_mr();
-          for (unsigned i = 0; i < l4_msgtag_words(tag); ++i)
+          if (mr->mr[i] != i)
             {
-              if (mr->mr[i] != i)
-                {
-                  fprintf(stderr, "IPC message includes incorrect MR data\n");
-                  break;
-                }
+              fprintf(stderr, "IPC message includes incorrect MR data\n");
+              break;
             }
         }
     }
+
+  printf("Goodbye from receiver\n");
 
   exit(EXIT_SUCCESS);
 }

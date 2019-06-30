@@ -1,11 +1,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <l4/re/env.h>
 #include <l4/sys/types.h>
 
 #include "ipc_sample_common.h"
 
+
+void
+ipc_chkcap(l4_cap_idx_t cap, char const *msg)
+{
+  if (l4_is_invalid_cap(cap))
+    {
+      if (msg)
+        fprintf(stderr, "error: %s\n", msg);
+
+      exit(EXIT_FAILURE);
+    }
+}
+
+void
+ipc_chksys(l4_msgtag_t tag, char const *msg)
+{
+  if (l4_msgtag_has_error(tag))
+    {
+      if (msg)
+        fprintf(stderr, "error: %s\n", msg);
+
+      exit(EXIT_FAILURE);
+    }
+}
 
 struct errcode_str {
   int code;
@@ -44,32 +67,4 @@ char const *ipc_strerror(int code)
     }
 
   return "unknown error";
-}
-
-l4_cap_idx_t get_chan_cap(int argc, char **argv)
-{
-  if (argc != 2)
-    {
-      fprintf(stderr, "usage: %s CHAN_CAPNAME\n", argv[0]);
-      exit(EXIT_FAILURE);
-    }
-
-  char *chan_capname = argv[1];
-
-  l4_cap_idx_t chan_cap = l4re_env_get_cap(chan_capname);
-  if (l4_is_invalid_cap(chan_cap))
-    {
-      fprintf(stderr, "failed to obtain '%s' capability\n", chan_capname);
-      exit(EXIT_FAILURE);
-    }
-
-  printf("'%s' capability has read rights: %s\n",
-         chan_capname,
-         chan_cap & L4_CAP_FPAGE_R ? "yes" : "no");
-
-  printf("'%s' capability has special rights: %s\n",
-         chan_capname,
-         chan_cap & L4_CAP_FPAGE_S ? "yes" : "no");
-
-  return chan_cap;
 }
