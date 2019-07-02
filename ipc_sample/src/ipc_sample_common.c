@@ -12,36 +12,13 @@
 #include <stdlib.h>
 
 #include <l4/sys/types.h>
+#include <l4/sys/utcb.h>
 
 #include "ipc_sample_common.h"
 
 
-void
-ipc_chkcap(l4_cap_idx_t cap, char const *msg)
-{
-  if (l4_is_invalid_cap(cap))
-    {
-      if (msg)
-        fprintf(stderr, "error: %s\n", msg);
-
-      exit(EXIT_FAILURE);
-    }
-}
-
-void
-ipc_chksys(l4_msgtag_t tag, char const *msg)
-{
-  if (l4_msgtag_has_error(tag))
-    {
-      if (msg)
-        fprintf(stderr, "error: %s\n", msg);
-
-      exit(EXIT_FAILURE);
-    }
-}
-
 struct errcode_str {
-  int code;
+  l4_umword_t code;
   char *str;
 };
 
@@ -68,8 +45,8 @@ static struct errcode_str errcodes[] = {
   make_errcode_str(L4_IPC_SEMSGCUT)
 };
 
-char const *
-ipc_strerror(int code)
+static char const *
+ipc_strerror(l4_umword_t code)
 {
   for (size_t i = 0; i < sizeof(errcodes) / sizeof(errcodes[0]); ++i)
     {
@@ -78,4 +55,52 @@ ipc_strerror(int code)
     }
 
   return "unknown error";
+}
+
+static void
+fail(char const *msg, char const *err)
+{
+  if (err)
+    fprintf(stderr, "error: %s (%s)\n", msg, err);
+  else
+    fprintf(stderr, "error: %s\n", msg);
+
+  exit(EXIT_FAILURE);
+}
+
+void
+chkcap(l4_cap_idx_t cap, char const *msg)
+{
+  if (l4_is_invalid_cap(cap))
+    fail(msg, NULL);
+}
+
+void
+chksys(long err, char const *msg)
+{
+  if (err < 0)
+    fail(msg, NULL);
+}
+
+void
+chkipc(l4_msgtag_t tag, char const *msg)
+{
+  if (l4_msgtag_has_error(tag))
+    fail(msg, ipc_strerror(l4_ipc_error(tag, l4_utcb())));
+}
+
+char const *
+lorem_ipsum()
+{
+  return "Lorem ipsum dolor sit amet, consetetur sadipscing elitr,"
+         "sed diam nonumy eirmod tempor invidunt ut labore et dolore"
+         "magna aliquyam erat, sed diam voluptua. At vero eos et"
+         "accusam et justo duo dolores et ea rebum. Stet clita kasd"
+         "gubergren, no sea takimata sanctus est Lorem ipsum dolor sit"
+         "amet. Lorem ipsum dolor sit amet, consetetur sadipscing"
+         "elitr, sed diam nonumy eirmod tempor invidunt ut labore et"
+         "dolore magna aliquyam erat, sed diam voluptua. At vero eos"
+         "et accusam et justo duo dolores et ea rebum. Stet clita kasd"
+         "gubergren, no sea takimata sanctus est Lorem ipsum dolor sit"
+         "amet.";
 }

@@ -20,8 +20,10 @@
 
 enum { IPC_LABEL = 1, IPC_THREAD_LABEL = 2 };
 
-void ipc_chkcap(l4_cap_idx_t cap, char const *msg);
-void ipc_chksys(l4_msgtag_t tag, char const *msg);
-char const *ipc_strerror(int err);
+void chkcap(l4_cap_idx_t cap, char const *msg);
+void chksys(long err, char const *msg);
+void chkipc(l4_msgtag_t tag, char const *msg);
+
+char const *lorem_ipsum(void);
 
 #endif // COMMON_H

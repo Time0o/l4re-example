@@ -10,7 +10,10 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
+#include <l4/re/c/dataspace.h>
+#include <l4/re/c/util/cap_alloc.h>
 #include <l4/re/env.h>
 #include <l4/sys/rcv_endpoint.h>
 #include <l4/sys/utcb.h>
@@ -26,16 +29,22 @@ main(void)
 
   /* bind capability */
   l4_cap_idx_t server = l4re_env_get_cap(IPC_CAP);
-  ipc_chkcap(server, "getting capability");
+  chkcap(server, "getting capability");
 
   l4re_env_t *env = l4re_env();
-  ipc_chksys(l4_rcv_ep_bind_thread(server, env->main_thread, IPC_THREAD_LABEL),
-             "binding capability to main thread");
+  chkipc(l4_rcv_ep_bind_thread(server, env->main_thread, IPC_THREAD_LABEL),
+         "binding capability to main thread");
 
   /* receive IPC */
+  l4_cap_idx_t rcv_cap = l4re_util_cap_alloc();
+
+  l4_buf_regs_t *br = l4_utcb_br();
+  br->bdr = 0;
+  br->br[0] = rcv_cap | L4_RCV_ITEM_SINGLE_CAP | L4_RCV_ITEM_LOCAL_ID;
+
   l4_umword_t label;
   l4_msgtag_t tag = l4_ipc_wait(l4_utcb(), &label, L4_IPC_NEVER);
-  ipc_chksys(tag, "receiving IPC\n");
+  chkipc(tag, "receiving IPC");
 
   if (label != IPC_THREAD_LABEL)
     fprintf(stderr, "IPC has incorrect thread label\n");
@@ -43,21 +52,17 @@ main(void)
   if (l4_msgtag_label(tag) != IPC_LABEL)
     fprintf(stderr, "IPC has incorrect tag label\n");
 
-  if (l4_msgtag_words(tag) != L4_UTCB_GENERIC_DATA_SIZE)
+  if (l4_msgtag_words(tag))
     {
-      fprintf(stderr, "IPC message does not include full MR data\n");
+      fprintf(stderr, "IPC message includes garbage MR data\n");
     }
   else
     {
-      l4_msg_regs_t *mr = l4_utcb_mr();
-      for (unsigned i = 0; i < l4_msgtag_words(tag); ++i)
-        {
-          if (mr->mr[i] != i)
-            {
-              fprintf(stderr, "IPC message includes incorrect MR data\n");
-              break;
-            }
-        }
+      char const *text = lorem_ipsum();
+      if (l4re_ds_size(rcv_cap) != strlen(text))
+        fprintf(stderr, "received dataspace too small\n");
+
+      // TODO: compare content
     }
 
   printf("Goodbye from receiver\n");
