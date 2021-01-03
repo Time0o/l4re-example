@@ -1,0 +1,8 @@
+entry l4re-example
+kernel fiasco
+roottask moe rom/l4re_example.cfg
+module l4re
+module ned
+module l4re_example_sender
+module l4re_example_receiver
+module l4re_example.cfg
